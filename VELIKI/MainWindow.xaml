@@ -1,0 +1,200 @@
+﻿<Window x:Class="VELIKI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:VELIKI"
+        
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Window.Resources>
+        <local:GreaterThan15Converter x:Key="GreaterThan15Converter"/>
+        <local:NewPriceConverter x:Key="NewPriceConverter"/>
+        <local:DiscountVisibilityConverter x:Key="DiscountVisibilityConverter"/>
+        <local:NormalPriceVisibilityConverter x:Key="NormalPriceVisibilityConverter"/>
+    </Window.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="#6A5ACD">
+            <Grid>
+                <TextBlock x:Name="TbFio" 
+                           Text="ФИО пользователя" 
+                           FontSize="16" 
+                           FontWeight="Bold" 
+                           Foreground="#FFFFFF"
+                           VerticalAlignment="Center" 
+                           HorizontalAlignment="Right" 
+                           Margin="0,0,20,0"/> 
+            </Grid>
+        </Border>
+
+        <!-- Список товаров в виде карточек -->
+        <ListBox x:Name="LbProducts" 
+         Grid.Row="1" 
+         Margin="10" 
+         Background="Transparent" 
+         BorderThickness="0"
+         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+
+            <!-- Раскладка карточек: перенос по ширине окна (как плитка) -->
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+
+            <!-- Шаблон одной карточки товара -->
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border x:Name="CardBorder"
+                Width="500" 
+                Height="250" 
+                Margin="5" 
+                Padding="10"
+                BorderBrush="#4B0082" 
+                BorderThickness="1" 
+                Background="#FFFFFF">
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- ФОТО ТОВАРА -->
+                            <Image Grid.Column="0" 
+                       Source="{Binding Фото}" 
+                       Width="100" 
+                       Height="100" 
+                       Stretch="Uniform"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Center"/>
+
+                            <!-- ИНФОРМАЦИЯ О ТОВАРЕ -->
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <!-- Заголовок: Категория | Наименование -->
+                                <TextBlock FontSize="14" 
+                               FontWeight="Bold" 
+                               Foreground="#4B0082" 
+                               TextWrapping="Wrap">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="{}{0} | {1}">
+                                            <!-- Категория через навигационное свойство -->
+                                            <Binding Path="КатегорияТовараNavigation.КатегорияТовара"/>
+                                            <!-- Наименование - прямое свойство, без Navigation! -->
+                                            <Binding Path="НаименованиеТовара"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+
+                                <TextBlock Margin="0,5,0,0" FontSize="11" TextWrapping="Wrap">
+                        <Run Text="Описание товара: " FontWeight="Bold"/>
+                        <Run Text="{Binding ОписаниеТовара}"/>
+                                </TextBlock>
+
+                                <TextBlock FontSize="11" TextWrapping="Wrap">
+                        <Run Text="Производитель: " FontWeight="Bold"/>
+                        <Run Text="{Binding ПроизводительNavigation.Производитель}"/>
+                                </TextBlock>
+
+                                <TextBlock FontSize="11" TextWrapping="Wrap">
+                        <Run Text="Поставщик: " FontWeight="Bold"/>
+                        <Run Text="{Binding ПоставщикNavigation.Поставщик}"/>
+                                </TextBlock>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock FontSize="11">
+        <Run Text="Цена: " FontWeight="Bold"/>
+                                    </TextBlock>
+
+                                    <!-- 1. Обычная цена (видна только если скидки нет) -->
+                                    <TextBlock FontSize="11" Text="{Binding Цена, StringFormat={}{0} ₽}">
+                                        <TextBlock.Visibility>
+                                            <Binding Path="ДействующаяСкидка" Converter="{StaticResource NormalPriceVisibilityConverter}"/>
+                                        </TextBlock.Visibility>
+                                    </TextBlock>
+
+                                    <!-- 2. Цена со скидкой (видна только если скидка > 0) -->
+                                    <StackPanel Orientation="Horizontal">
+                                        <!-- Старая цена (красная, зачеркнутая) -->
+                                        <TextBlock FontSize="11" Foreground="Red" TextDecorations="Strikethrough" 
+                   Text="{Binding Цена, StringFormat={}{0} ₽}" Margin="0,0,5,0"/>
+
+                                        <!-- Новая цена (черная, посчитанная конвертером) -->
+                                        <TextBlock FontSize="11" FontWeight="Bold">
+                                            <TextBlock.Text>
+                                                <MultiBinding Converter="{StaticResource NewPriceConverter}">
+                                                    <Binding Path="Цена"/>
+                                                    <Binding Path="ДействующаяСкидка"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <!-- Скрываем блок со скидкой, если скидки нет -->
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ДействующаяСкидка, Converter={StaticResource DiscountVisibilityConverter}}" Value="Visible">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                </StackPanel>
+
+                                <TextBlock FontSize="11">
+                        <Run Text="Единица измерения: " FontWeight="Bold"/>
+                        <Run Text="{Binding ЕдиницаИзмерения}"/>
+                                </TextBlock>
+
+                                <TextBlock FontSize="11">
+                        <Run Text="Количество на складе: " FontWeight="Bold"/>
+                        <Run Text="{Binding КолВоНаСкладе}"/>
+                                </TextBlock>
+                            </StackPanel>
+
+                            <!-- СКИДКА -->
+                            <Border Grid.Column="2" 
+                        Width="70" 
+                        Height="70" 
+                        BorderBrush="#4B0082" 
+                        BorderThickness="1" 
+                        VerticalAlignment="Center" 
+                        HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding ДействующаяСкидка, StringFormat={}{0}%}" 
+                               FontSize="24" 
+                               FontWeight="Bold" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- УСЛОВНОЕ ФОРМАТИРОВАНИЕ -->
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#FFFFFF"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ДействующаяСкидка, Converter={StaticResource GreaterThan15Converter}}" Value="True">
+                                        <Setter Property="Background" Value="#483D8B"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding КолВоНаСкладе}" Value="0">
+                                        <Setter Property="Background" Value="LightGray"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+
+    </Grid>
+</Window>
